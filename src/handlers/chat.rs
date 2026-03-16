@@ -20,6 +20,19 @@ pub async fn read_loop(
             Err(_) => continue,
         };
 
+         if payload.r#type.as_deref() == Some("ping") {
+            let pong = serde_json::json!({
+                "type": "pong",
+                "sent": payload.sent.unwrap_or(0)
+            });
+
+            let _ =
+                users_chat::send_to_user(user_id, Message::Text(pong.to_string().into()), &state)
+                    .await;
+
+            continue;
+        }
+
         let other_user = payload.receiver_id;
         let out = WsMessageOut {
             sender_id: user_id,
@@ -39,7 +52,7 @@ pub async fn read_loop(
 
         let _ = users_chat::send_to_user(user_id, message, &state).await;
 
-        let state_bg = state.clone();   
+        let state_bg = state.clone();
         let content = payload.content.clone();
         let chat_id = payload.chat_id;
         tokio::spawn(async move {

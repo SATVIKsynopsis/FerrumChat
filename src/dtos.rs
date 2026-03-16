@@ -101,6 +101,8 @@ pub struct ChatDto {
     pub user1_id: Uuid,
     pub user2_id: Uuid,
     pub created_at: DateTime<Utc>,
+    pub r#type: Option<String>,
+    pub sent: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
