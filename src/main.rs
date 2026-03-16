@@ -75,7 +75,7 @@ async fn main() {
     let cors = CorsLayer::new()
         .allow_origin([
             "http://localhost:3000".parse::<HeaderValue>().unwrap(),
-            "https://bloggy-xi-indol.vercel.app"
+            "https://ferri-front.vercel.app"
                 .parse::<HeaderValue>()
                 .unwrap(),
         ])
