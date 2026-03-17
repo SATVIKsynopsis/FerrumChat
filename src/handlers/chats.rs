@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{delete, get, post, patch},
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -27,6 +27,8 @@ pub fn chats_handler() -> Router<Arc<AppState>> {
         .route("/chats", get(get_chats))
         .route("/chats/:id/messages", get(get_messages))
         .route("/chats/:id", delete(delete_chat))
+        .route("/messages/:id", patch(edit_message))      
+        .route("/messages/:id", delete(delete_message))  
 }
 
 pub async fn create_chat(
@@ -83,6 +85,35 @@ pub async fn delete_chat(
     state
         .db_client
         .delete_chat(chat_id)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn edit_message(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<JWTAuthMiddleware>,
+    Path(message_id): Path<Uuid>,
+    Json(body): Json<MessageDto>,
+) -> Result<impl IntoResponse, HttpError> {
+    let message = state
+        .db_client
+        .edit_message(message_id, &body.content)
+        .await
+        .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    Ok(Json(message))
+}
+
+pub async fn delete_message(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<JWTAuthMiddleware>,
+    Path(message_id): Path<Uuid>,
+) -> Result<impl IntoResponse, HttpError> {
+    state
+        .db_client
+        .delete_message(message_id)
         .await
         .map_err(|e| HttpError::server_error(e.to_string()))?;
 

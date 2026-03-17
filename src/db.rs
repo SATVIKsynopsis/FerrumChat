@@ -38,6 +38,12 @@ pub trait UserExt {
         user_id: Uuid,
         name: T,
     ) -> Result<User, sqlx::Error>;
+
+    async fn search_users_by_username(
+        &self,
+        username: &str,
+        exclude_id: Uuid,
+    ) -> Result<Vec<User>, sqlx::Error>;
 }
 
 #[async_trait]
@@ -71,6 +77,11 @@ pub trait MessageExt {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Message>, sqlx::Error>;
+
+    async fn edit_message(&self, message_id: Uuid, new_content: &str) -> Result<Message, sqlx::Error>;
+
+    async fn delete_message(&self, message_id: Uuid) -> Result<(), sqlx::Error>;
+
 }
 
 #[async_trait]
@@ -169,6 +180,18 @@ RETURNING id, name, username, email, password, created_at, updated_at",
 
         Ok(user)
     }
+
+    async fn search_users_by_username(&self, username: &str, exclude_id: Uuid) -> Result<Vec<User>, sqlx::Error> {
+    sqlx::query_as!(
+        User,
+        "SELECT id, name, username, email, password, created_at, updated_at 
+         FROM users WHERE username ILIKE $1 AND id != $2 LIMIT 10",
+        format!("%{}%", username),
+        exclude_id
+    )
+    .fetch_all(&self.pool)
+    .await
+}
 }
 
 #[async_trait]
@@ -246,6 +269,7 @@ impl ChatExt for DBClient {
     }
 }
 
+
 #[async_trait]
 impl MessageExt for DBClient {
     async fn create_message(
@@ -295,4 +319,32 @@ impl MessageExt for DBClient {
 
         Ok(msgs)
     }
+
+    async fn edit_message(&self, message_id: Uuid, new_content: &str) -> Result<Message, sqlx::Error> {
+        let msg = sqlx::query_as!(
+            Message,
+            r#"
+            UPDATE messages
+            SET content = $1
+            WHERE id = $2
+            RETURNING id, chat_id, sender_id, content, created_at
+            "#,
+            new_content,
+            message_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(msg)
+    }
+
+    async fn delete_message(&self, message_id: Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM messages WHERE id = $1", message_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
 }
+

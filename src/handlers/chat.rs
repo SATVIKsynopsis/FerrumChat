@@ -20,7 +20,7 @@ pub async fn read_loop(
             Err(_) => continue,
         };
 
-         if payload.r#type.as_deref() == Some("ping") {
+        if payload.r#type.as_deref() == Some("ping") {
             let pong = serde_json::json!({
                 "type": "pong",
                 "sent": payload.sent.unwrap_or(0)
