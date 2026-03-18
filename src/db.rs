@@ -60,6 +60,12 @@ pub trait ChatExt {
         &self,
         user_id: Uuid,
     ) -> Result<Vec<ChatWithParticipant>, sqlx::Error>;
+
+    async fn get_chat_between_users(
+        &self,
+        user1_id: Uuid,
+        user2_id: Uuid,
+    ) -> Result<Chat, sqlx::Error>;
 }
 
 #[async_trait]
@@ -275,6 +281,28 @@ impl ChatExt for DBClient {
 
         Ok(chats)
     }
+
+    async fn get_chat_between_users(
+    &self,
+    user1: Uuid,
+    user2: Uuid,
+) -> Result<Chat, sqlx::Error> {
+    sqlx::query_as!(
+        Chat,
+        r#"
+        SELECT id, user1_id, user2_id, created_at
+        FROM chats
+        WHERE (user1_id = $1 AND user2_id = $2)
+           OR (user1_id = $2 AND user2_id = $1)
+        LIMIT 1
+        "#,
+        user1,
+        user2
+    )
+    .fetch_one(&self.pool)
+    .await
+}
+
 }
 
 #[async_trait]

@@ -12,8 +12,8 @@ use crate::{
     AppState,
     db::{ChatExt, MessageExt},
     dtos::{
-        ChatDto, ChatListResponseDto, CreateChatDto, MessageDto, MessageListResponseDto,
-        RequestQueryDto,EditMessageDto,
+        ChatDto, ChatListResponseDto, CreateChatDto, EditMessageDto, MessageDto,
+        MessageListResponseDto, RequestQueryDto,
     },
     error::HttpError,
     middleware::JWTAuthMiddleware,
@@ -36,13 +36,32 @@ pub async fn create_chat(
     Extension(user): Extension<JWTAuthMiddleware>,
     Json(body): Json<CreateChatDto>,
 ) -> Result<impl IntoResponse, HttpError> {
-    let chat = state
+    let result = state
         .db_client
         .create_chat(user.user.id, body.receiver_id)
-        .await
-        .map_err(|e| HttpError::server_error(e.to_string()))?;
+        .await;
 
-    Ok((StatusCode::CREATED, Json(chat)))
+    match result {
+        Ok(chat) => Ok((StatusCode::CREATED, Json(chat))),
+
+        Err(e) => {
+            if let Some(db_err) = e.as_database_error() {
+                if let Some(constraint) = db_err.constraint() {
+                    if constraint == "unique_chat_pair" {
+                        let existing_chat = state
+                            .db_client
+                            .get_chat_between_users(user.user.id, body.receiver_id)
+                            .await
+                            .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+                        return Ok((StatusCode::OK, Json(existing_chat)));
+                    }
+                }
+            }
+
+            Err(HttpError::server_error(e.to_string()))
+        }
+    }
 }
 
 pub async fn get_chats(
@@ -95,16 +114,14 @@ pub async fn edit_message(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<JWTAuthMiddleware>,
     Path(message_id): Path<Uuid>,
-    Json(body): Json<EditMessageDto>, 
+    Json(body): Json<EditMessageDto>,
 ) -> Result<impl IntoResponse, HttpError> {
     let message = state
         .db_client
         .edit_message(message_id, user.user.id, &body.content)
         .await
         .map_err(|e| match e {
-            sqlx::Error::RowNotFound => {
-                HttpError::unauthorized("Not allowed to edit this message")
-            }
+            sqlx::Error::RowNotFound => HttpError::unauthorized("Not allowed to edit this message"),
             _ => HttpError::server_error(e.to_string()),
         })?;
 
