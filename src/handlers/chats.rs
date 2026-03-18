@@ -13,7 +13,7 @@ use crate::{
     db::{ChatExt, MessageExt},
     dtos::{
         ChatDto, ChatListResponseDto, CreateChatDto, MessageDto, MessageListResponseDto,
-        RequestQueryDto,
+        RequestQueryDto,EditMessageDto,
     },
     error::HttpError,
     middleware::JWTAuthMiddleware,
