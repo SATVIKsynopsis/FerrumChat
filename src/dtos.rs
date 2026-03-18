@@ -133,6 +133,11 @@ pub struct MessageDto {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct EditMessageDto {
+    pub content: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct SendMessageDto {
     pub chat_id: Uuid,

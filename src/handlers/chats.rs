@@ -95,14 +95,16 @@ pub async fn edit_message(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<JWTAuthMiddleware>,
     Path(message_id): Path<Uuid>,
-    Json(body): Json<MessageDto>,
+    Json(body): Json<EditMessageDto>, 
 ) -> Result<impl IntoResponse, HttpError> {
     let message = state
         .db_client
         .edit_message(message_id, user.user.id, &body.content)
         .await
         .map_err(|e| match e {
-            sqlx::Error::RowNotFound => HttpError::unauthorized("Not allowed to edit this message"),
+            sqlx::Error::RowNotFound => {
+                HttpError::unauthorized("Not allowed to edit this message")
+            }
             _ => HttpError::server_error(e.to_string()),
         })?;
 
