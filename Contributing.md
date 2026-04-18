@@ -43,12 +43,10 @@ git checkout -b your-feature-name
 ```
 
 ### 5. Make Changes & Commit
-*   Write clean, readable code.
-*  cargo fmt
-*  cargo clippy
-*  cargo build
-* cargo test
-* dbg!();
+* Write clean, readable code.
+* cargo fmt
+* cargo clippy
+* cargo build
 * println!("debug");
 * Remove all debug macros like dbg!() and unnecessary prints.
 * Ensure code passes cargo build and cargo test before PR submission.
