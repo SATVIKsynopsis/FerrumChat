@@ -41,11 +41,19 @@ pub async fn read_loop(
             created_at: Utc::now(),
         };
 
-        let message = Message::Text(serde_json::to_string(&out).unwrap().into());
+        let out_str = match serde_json::to_string(&out) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("Failed to serialize message: {}", e);
+                continue;
+            }
+        };
+
+        let message = Message::Text(out_str.clone().into());
 
         let _ = users_chat::send_to_user(
             other_user,
-            Message::Text(serde_json::to_string(&out).unwrap().into()),
+            Message::Text(out_str.into()),
             &state,
         )
         .await;

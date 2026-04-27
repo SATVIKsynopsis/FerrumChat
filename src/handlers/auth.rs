@@ -102,7 +102,9 @@ pub async fn login(
 
         let mut headers = HeaderMap::new();
 
-        headers.append(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+        let cookie_val = cookie.to_string().parse()
+            .map_err(|e| HttpError::server_error(format!("Failed to parse cookie: {}", e)))?;
+        headers.append(header::SET_COOKIE, cookie_val);
 
         let mut response = response.into_response();
         response.headers_mut().extend(headers);
@@ -115,20 +117,20 @@ pub async fn login(
     }
 }
 
-pub async fn logout(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn logout(State(app_state): State<Arc<AppState>>) -> Result<impl IntoResponse, HttpError> {
     let cookie = axum::http::HeaderValue::from_str(
         "access_token=; Path=/; HttpOnly; Max-Age=0; SameSite=None; Secure",
     )
-    .unwrap();
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
 
     let mut headers = HeaderMap::new();
     headers.insert(header::SET_COOKIE, cookie);
 
-    (
+    Ok((
         headers,
         Json(Response {
             status: "success",
             message: "Logged out successfully".to_string(),
         }),
-    )
+    ))
 }
